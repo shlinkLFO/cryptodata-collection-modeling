@@ -1,0 +1,20 @@
+ssh -i "C:\Users\mason\Downloads\ssh-key-2025-04-02 (1).key" opc@164.152.110.233
+sudo -u postgres psql -d ohlcv_db
+\dt
+
+scp -i "C:\Users\mason\Downloads\ssh-key-2025-04-02 (1).key" advanced_features.py opc@164.152.110.233:~/
+
+SELECT timestamp, symbol, open, high, low, close, volumefrom, volumeto, COUNT(*) OVER (PARTITION BY DATE_TRUNC('minute', timestamp), symbol) AS records_per_minute FROM public.ohlcv ORDER BY timestamp DESC, symbol LIMIT 20;
+
+SELECT * FROM public.ohlcv 
+ORDER BY timestamp DESC 
+LIMIT 100;
+
+SELECT COUNT(*) AS total_rows FROM public.ohlcv;
+
+SELECT * FROM public.ohlcv 
+WHERE symbol = 'BTC'
+ORDER BY timestamp DESC 
+LIMIT 10;
+
+ps aux | grep python | grep coinbase
