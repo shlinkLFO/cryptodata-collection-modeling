@@ -1,0 +1,40 @@
+Probability Threshold Tuning (Potentially High Impact):
+
+Problem: model.predict() uses a default probability threshold of 0.5. For imbalanced datasets or when optimizing F1, this is rarely optimal.
+
+Idea:
+
+Inside the inner CV loop, after finding the best hyperparameters (best_params_iter) and training model_cv on X_train_sub/y_train_sub, get probabilities on the validation set: y_pred_proba_val = model_cv.predict_proba(X_val)[:, 1]
+
+Iterate through potential thresholds (e.g., from 0.1 to 0.9 in steps of 0.05). For each threshold t, calculate predictions (y_pred_proba_val >= t).astype(int) and compute the F1 score against y_val.
+
+Find the threshold best_threshold_iter that maximized F1 on the validation set (X_val, y_val).
+
+After training the current_model on the full training fold (X_train_full, y_train_full), use predict_proba on the test set: y_pred_proba_test = current_model.predict_proba(X_test)[:, 1].
+
+Apply the best_threshold_iter found in step 3 to get the final predictions for evaluation: y_pred = (y_pred_proba_test >= best_threshold_iter).astype(int).
+This directly optimizes the decision boundary for F1 score based on recent validation data.
+
+Implementation Steps (as you outlined):
+
+Inner CV: Perform hyperparameter tuning as usual on X_train_sub, evaluating on X_val. Find best_params_iter.
+
+Get Best Inner Model: Ideally, you'd refit a model with best_params_iter on X_train_sub (or retrieve the best one from the CV process if feasible). Let's call this model_cv_best_params.
+
+Get Validation Probabilities: Use model_cv_best_params to get probabilities for the positive class on the validation set: y_pred_proba_val = model_cv_best_params.predict_proba(X_val)[:, 1].
+
+Search for Best Threshold: Loop through candidate thresholds t (e.g., np.arange(0.1, 0.9, 0.05)). For each t:
+
+Convert probabilities to predictions: y_pred_val_t = (y_pred_proba_val >= t).astype(int).
+
+Calculate f1_score(y_val, y_pred_val_t).
+
+Keep track of the threshold best_threshold_iter that yields the highest F1 score. Handle potential errors/warnings if y_val contains only one class (F1 might be undefined or 0). In such cases, you might default best_threshold_iter to 0.5 or skip threshold tuning for that fold.
+
+Train Final Fold Model: Train current_model using best_params_iter on the full training data for the fold (X_train_full, y_train_full).
+
+Get Test Probabilities: Predict probabilities on the actual test set for the fold: y_pred_proba_test = current_model.predict_proba(X_test)[:, 1].
+
+Apply Best Threshold: Convert test probabilities to final predictions using the threshold found in step 4: y_pred = (y_pred_proba_test >= best_threshold_iter).astype(int).
+
+Evaluate: Calculate metrics (Accuracy, Precision, Recall, F1) using these y_pred against y_test.

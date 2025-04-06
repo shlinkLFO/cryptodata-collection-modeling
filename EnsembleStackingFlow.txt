@@ -1,0 +1,35 @@
+The entire Ensemble Stacking -> Meta Learner Tuning -> Probability Threshold Tuning -> Binary Decision process you outlined can, and often should, be implemented inside each iteration of your Walk-Forward Validation loop.
+
+Here's how it fits together:
+
+Walk-Forward Loop Starts: Define train_df and test_df for the current window.
+
+Stacking & Meta-Learning (Inside the Loop):
+
+Treat the train_df as the entire dataset for this specific iteration's model building process.
+
+Level 0: Perform k-fold cross-validation within train_df to train your base models (XGB, LGBM, SVM) and generate the out-of-fold predictions (X_meta_train). Also, train each base model on the full train_df (save these models).
+
+Level 1: Use X_meta_train and y_train to:
+
+Perform GridSearch on the meta-learner (XGBoost).
+
+Perform Probability Threshold Tuning (using a train/validation split of X_meta_train).
+
+Train the final meta-learner on all of X_meta_train using the best hyperparameters found.
+
+Store the best threshold found (best_threshold_iter) and the fully trained Level 0 models and the Level 1 meta-learner.
+
+Prediction (Inside the Loop):
+
+Use the saved Level 0 models (trained on the full train_df) to predict on test_df, generating X_meta_test.
+
+Feed X_meta_test into the saved Level 1 meta-learner to get y_proba_test.
+
+Apply best_threshold_iter to y_proba_test to get the final y_pred for the test_df.
+
+Evaluation (Inside the Loop): Calculate F1, Precision, Recall, etc., using y_pred and y_test. Store these metrics.
+
+Slide Window: Increment the start index and repeat from step 1 for the next window.
+
+Aggregate Results: After the loop finishes, calculate the average performance metrics across all folds.
